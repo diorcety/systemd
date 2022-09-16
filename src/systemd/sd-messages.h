@@ -200,6 +200,9 @@ _SD_BEGIN_DECLARATIONS;
 #define SD_MESSAGE_SYSTEMD_UDEV_SETTLE_DEPRECATED_STR \
                                           SD_ID128_MAKE_STR(1c,04,54,c1,bd,22,41,e0,ac,6f,ef,b4,bc,63,14,33)
 
+#define SD_MESSAGE_TPM_PCR_EXTEND                     SD_ID128_MAKE(3f,7d,5e,f3,e5,4f,43,02,b4,f0,b1,43,bb,27,0c,ab)
+#define SD_MESSAGE_TPM_PCR_EXTEND_STR                 SD_ID128_MAKE_STR(3f,7d,5e,f3,e5,4f,43,02,b4,f0,b1,43,bb,27,0c,ab)
+
 _SD_END_DECLARATIONS;
 
 #endif

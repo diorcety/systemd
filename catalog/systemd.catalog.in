@@ -526,3 +526,15 @@ be updated to operate in a hotplug fashion without depending on
 systemd-udev-settle.service:
 
     @OFFENDING_UNITS@
+
+-- 3f7d5ef3e54f4302b4f0b143bb270cab
+Subject: TPM PCR Extended
+Defined-By: systemd
+Support: %SUPPORT_URL%
+
+The string '@MEASURING@' has been extended into Trusted Platform Module's (TPM)
+Platform Configuration Register (PCR) @PCR@, on banks @BANKS@.
+
+Whenever the system transitions to a new runtime phase, a different string is
+extended into the specified PCR, to ensure that security policies for TPM-bound
+secrets and other resources are limited to specific phases of the runtime.
