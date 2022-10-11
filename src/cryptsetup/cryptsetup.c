@@ -44,6 +44,7 @@
 /* as in src/cryptsetup.h */
 #define CRYPT_SECTOR_SIZE 512
 #define CRYPT_MAX_SECTOR_SIZE 4096
+#define TPM_PCR_INDEX_VOLUME_KEY 15U
 
 static const char *arg_type = NULL; /* ANY_LUKS, CRYPT_LUKS1, CRYPT_LUKS2, CRYPT_TCRYPT, CRYPT_BITLK or CRYPT_PLAIN */
 static char *arg_cipher = NULL;
