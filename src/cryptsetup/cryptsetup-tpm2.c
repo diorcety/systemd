@@ -22,6 +22,8 @@ int acquire_tpm2_key(
                 size_t key_data_size,
                 const void *policy_hash,
                 size_t policy_hash_size,
+                const void *srk_buf,
+                size_t srk_buf_size,
                 void **ret_decrypted_key,
                 size_t *ret_decrypted_key_size) {
 
@@ -64,7 +66,7 @@ int acquire_tpm2_key(
                 blob = loaded_blob;
         }
 
-        return tpm2_unseal(device, pcr_mask, pcr_bank, primary_alg, blob, blob_size, policy_hash, policy_hash_size, ret_decrypted_key, ret_decrypted_key_size);
+        return tpm2_unseal(device, pcr_mask, pcr_bank, primary_alg, blob, blob_size, policy_hash, policy_hash_size, srk_buf, srk_buf_size, ret_decrypted_key, ret_decrypted_key_size);
 }
 
 int find_tpm2_auto_data(
@@ -78,11 +80,13 @@ int find_tpm2_auto_data(
                 size_t *ret_blob_size,
                 void **ret_policy_hash,
                 size_t *ret_policy_hash_size,
+                void **ret_srk_buf,
+                size_t *ret_srk_buf_size,
                 int *ret_keyslot,
                 int *ret_token) {
 
-        _cleanup_free_ void *blob = NULL, *policy_hash = NULL;
-        size_t blob_size = 0, policy_hash_size = 0;
+        _cleanup_free_ void *blob = NULL, *policy_hash = NULL, *srk_buf = NULL;
+        size_t blob_size = 0, policy_hash_size = 0, srk_buf_size = 0;
         int r, keyslot = -1, token = -1;
         uint32_t pcr_mask = 0;
         uint16_t pcr_bank = UINT16_MAX; /* default: pick automatically */
@@ -196,6 +200,17 @@ int find_tpm2_auto_data(
                         return log_error_errno(SYNTHETIC_ERRNO(EINVAL),
                                                "Invalid base64 data in 'tpm2-policy-hash' field.");
 
+                w = json_variant_by_key(v, "tpm2_srk");
+                if (w) {
+                    if (!json_variant_is_string(w))
+                            return log_error_errno(SYNTHETIC_ERRNO(EINVAL),
+                                                   "TPM2 token data lacks 'tpm2-srk' field.");
+
+                    r = unbase64mem(json_variant_string(w), SIZE_MAX, &srk_buf, &srk_buf_size);
+                    if (r < 0)
+                            return log_error_errno(SYNTHETIC_ERRNO(EINVAL),
+                                                   "Invalid base64 data in 'tpm2-srk' field.");
+                }
                 break;
         }
 
@@ -215,6 +230,8 @@ int find_tpm2_auto_data(
         *ret_token = token;
         *ret_pcr_bank = pcr_bank;
         *ret_primary_alg = primary_alg;
+        *ret_srk_buf = TAKE_PTR(srk_buf);
+        *ret_srk_buf_size = srk_buf_size;
 
         return 0;
 }

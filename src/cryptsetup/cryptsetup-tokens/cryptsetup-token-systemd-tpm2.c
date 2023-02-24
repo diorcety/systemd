@@ -55,14 +55,14 @@ _public_ int cryptsetup_token_open(
 
         int r;
         const char *json;
-        size_t blob_size, policy_hash_size, decrypted_key_size;
+        size_t blob_size, policy_hash_size, decrypted_key_size, srk_buf_size = 0;
         uint32_t pcr_mask;
         uint16_t pcr_bank, primary_alg;
         systemd_tpm2_plugin_params params = {
                 .search_pcr_mask = UINT32_MAX
         };
-        _cleanup_free_ void *blob = NULL, *policy_hash = NULL;
-        _cleanup_free_ char *base64_blob = NULL, *hex_policy_hash = NULL;
+        _cleanup_free_ void *blob = NULL, *policy_hash = NULL, *srk_buf = NULL;
+        _cleanup_free_ char *base64_blob = NULL, *hex_policy_hash = NULL, *base64_srk = NULL;
         _cleanup_(erase_and_freep) void *decrypted_key = NULL;
         _cleanup_(erase_and_freep) char *base64_encoded = NULL;
 
@@ -78,7 +78,7 @@ _public_ int cryptsetup_token_open(
         if (usrptr)
                 params = *(systemd_tpm2_plugin_params *)usrptr;
 
-        r = parse_luks2_tpm2_data(json, params.search_pcr_mask, &pcr_mask, &pcr_bank, &primary_alg, &base64_blob, &hex_policy_hash);
+        r = parse_luks2_tpm2_data(json, params.search_pcr_mask, &pcr_mask, &pcr_bank, &primary_alg, &base64_blob, &hex_policy_hash, &base64_srk);
         if (r < 0)
                 return log_debug_open_error(cd, r);
 
@@ -86,6 +86,14 @@ _public_ int cryptsetup_token_open(
         r = unbase64mem(base64_blob, SIZE_MAX, &blob, &blob_size);
         if (r < 0)
                 return log_debug_open_error(cd, r);
+
+        if (base64_srk != NULL)
+        {
+                /* should not happen since cryptsetup_token_validate have passed */
+                r = unbase64mem(base64_srk, SIZE_MAX, &srk_buf, &srk_buf_size);
+                if (r < 0)
+                        return log_debug_open_error(cd, r);
+        }
 
         /* should not happen since cryptsetup_token_validate have passed */
         r = unhexmem(hex_policy_hash, SIZE_MAX, &policy_hash, &policy_hash_size);
@@ -101,6 +109,8 @@ _public_ int cryptsetup_token_open(
                         blob_size,
                         policy_hash,
                         policy_hash_size,
+                        srk_buf,
+                        srk_buf_size,
                         &decrypted_key,
                         &decrypted_key_size);
         if (r < 0)
@@ -137,14 +147,14 @@ _public_ void cryptsetup_token_dump(
         int r;
         uint32_t pcr_mask;
         uint16_t pcr_bank, primary_alg;
-        size_t decoded_blob_size;
+        size_t decoded_blob_size, decoded_srk_size = 0;
         _cleanup_free_ char *base64_blob = NULL, *hex_policy_hash = NULL,
-                            *pcrs_str = NULL, *blob_str = NULL, *policy_hash_str = NULL;
-        _cleanup_free_ void *decoded_blob = NULL;
+                            *pcrs_str = NULL, *blob_str = NULL, *policy_hash_str = NULL, *base64_srk = NULL, *srk_str = NULL;
+        _cleanup_free_ void *decoded_blob = NULL, *decoded_srk = NULL;
 
         assert(json);
 
-        r = parse_luks2_tpm2_data(json, UINT32_MAX, &pcr_mask, &pcr_bank, &primary_alg, &base64_blob, &hex_policy_hash);
+        r = parse_luks2_tpm2_data(json, UINT32_MAX, &pcr_mask, &pcr_bank, &primary_alg, &base64_blob, &hex_policy_hash, &base64_srk);
         if (r < 0)
                 return (void) crypt_log_debug_errno(cd, r, "Failed to parse " TOKEN_NAME " metadata: %m.");
 
@@ -166,11 +176,24 @@ _public_ void cryptsetup_token_dump(
         if (r < 0)
                 return (void) crypt_log_debug_errno(cd, r, "Can not dump " TOKEN_NAME " content: %m");
 
+        if (base64_srk != NULL) {
+                r = unbase64mem(base64_srk, SIZE_MAX, &decoded_srk, &decoded_srk_size);
+                if (r < 0)
+                        return (void) crypt_log_debug_errno(cd, r, "Can not dump " TOKEN_NAME " content: %m");
+
+                r = crypt_dump_buffer_to_hex_string(decoded_srk, decoded_srk_size, &srk_str);
+                if (r < 0)
+                        return (void) crypt_log_debug_errno(cd, r, "Can not dump " TOKEN_NAME " content: %m");
+        }
+
         crypt_log(cd, "\ttpm2-pcrs:  %s\n", strna(pcrs_str));
         crypt_log(cd, "\ttpm2-bank:  %s\n", strna(tpm2_pcr_bank_to_string(pcr_bank)));
         crypt_log(cd, "\ttpm2-primary-alg:  %s\n", strna(tpm2_primary_alg_to_string(primary_alg)));
         crypt_log(cd, "\ttpm2-blob:  %s\n", blob_str);
         crypt_log(cd, "\ttpm2-policy-hash:" CRYPT_DUMP_LINE_SEP "%s\n", policy_hash_str);
+        if (srk_str) {
+                crypt_log(cd, "\ttpm2-srk:   %s\n", srk_str);
+        }
 }
 
 /*

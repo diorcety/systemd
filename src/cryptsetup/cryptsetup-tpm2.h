@@ -22,6 +22,8 @@ int acquire_tpm2_key(
                 size_t key_data_size,
                 const void *policy_hash,
                 size_t policy_hash_size,
+                const void *srk_buf,
+                size_t salt_srk_buf_size,
                 void **ret_decrypted_key,
                 size_t *ret_decrypted_key_size);
 
@@ -36,6 +38,8 @@ int find_tpm2_auto_data(
                 size_t *ret_blob_size,
                 void **ret_policy_hash,
                 size_t *ret_policy_hash_size,
+                void **ret_srk_buf,
+                size_t *ret_srk_size,
                 int *ret_keyslot,
                 int *ret_token);
 

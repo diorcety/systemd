@@ -1302,6 +1302,7 @@ static int attach_luks_or_plain_or_bitlk_by_tpm2(
                                         key_file, arg_keyfile_size, arg_keyfile_offset,
                                         key_data, key_data_size,
                                         NULL, 0, /* we don't know the policy hash */
+                                        /* srk_buf= */ NULL, /* srk_buf_size= */ 0,
                                         &decrypted_key, &decrypted_key_size);
                         if (r >= 0)
                                 break;
@@ -1334,6 +1335,8 @@ static int attach_luks_or_plain_or_bitlk_by_tpm2(
                          * works. */
 
                         for (;;) {
+                                _cleanup_free_ void *srk_buf = NULL;
+                                size_t srk_buf_size = 0;
                                 uint32_t pcr_mask;
                                 uint16_t pcr_bank, primary_alg;
 
@@ -1346,6 +1349,7 @@ static int attach_luks_or_plain_or_bitlk_by_tpm2(
                                                 &primary_alg,
                                                 &blob, &blob_size,
                                                 &policy_hash, &policy_hash_size,
+                                                &srk_buf, &srk_buf_size,
                                                 &keyslot,
                                                 &token);
                                 if (r == -ENXIO)
@@ -1370,6 +1374,7 @@ static int attach_luks_or_plain_or_bitlk_by_tpm2(
                                                 NULL, 0, 0, /* no key file */
                                                 blob, blob_size,
                                                 policy_hash, policy_hash_size,
+                                                srk_buf, srk_buf_size,
                                                 &decrypted_key, &decrypted_key_size);
                                 if (r != -EPERM)
                                         break;

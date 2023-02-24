@@ -67,8 +67,9 @@ int enroll_tpm2(struct crypt_device *cd,
         _cleanup_(erase_and_freep) void *secret = NULL, *secret2 = NULL;
         _cleanup_(json_variant_unrefp) JsonVariant *v = NULL;
         _cleanup_(erase_and_freep) char *base64_encoded = NULL;
-        size_t secret_size, secret2_size, blob_size, hash_size;
+        size_t secret_size, secret2_size, blob_size, hash_size, srk_buf_size = 0;
         _cleanup_free_ void *blob = NULL, *hash = NULL;
+        _cleanup_(freep) void *srk_buf = NULL;
         uint16_t pcr_bank, primary_alg;
         const char *node;
         int r, keyslot;
@@ -80,7 +81,7 @@ int enroll_tpm2(struct crypt_device *cd,
 
         assert_se(node = crypt_get_device_name(cd));
 
-        r = tpm2_seal(device, pcr_mask, &secret, &secret_size, &blob, &blob_size, &hash, &hash_size, &pcr_bank, &primary_alg);
+        r = tpm2_seal(device, pcr_mask, &secret, &secret_size, &blob, &blob_size, &hash, &hash_size, &pcr_bank, &primary_alg, &srk_buf, &srk_buf_size);
         if (r < 0)
                 return r;
 
@@ -97,7 +98,7 @@ int enroll_tpm2(struct crypt_device *cd,
 
         /* Quick verification that everything is in order, we are not in a hurry after all. */
         log_debug("Unsealing for verification...");
-        r = tpm2_unseal(device, pcr_mask, pcr_bank, primary_alg, blob, blob_size, hash, hash_size, &secret2, &secret2_size);
+        r = tpm2_unseal(device, pcr_mask, pcr_bank, primary_alg, blob, blob_size, hash, hash_size, srk_buf, srk_buf_size, &secret2, &secret2_size);
         if (r < 0)
                 return r;
 
@@ -123,7 +124,7 @@ int enroll_tpm2(struct crypt_device *cd,
         if (keyslot < 0)
                 return log_error_errno(keyslot, "Failed to add new TPM2 key to %s: %m", node);
 
-        r = tpm2_make_luks2_json(keyslot, pcr_mask, pcr_bank, primary_alg, blob, blob_size, hash, hash_size, &v);
+        r = tpm2_make_luks2_json(keyslot, pcr_mask, pcr_bank, primary_alg, blob, blob_size, hash, hash_size, srk_buf, srk_buf_size, &v);
         if (r < 0)
                 return log_error_errno(r, "Failed to prepare TPM2 JSON token object: %m");
 

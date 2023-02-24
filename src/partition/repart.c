@@ -2601,12 +2601,12 @@ static int partition_encrypt(
                 _cleanup_(erase_and_freep) char *base64_encoded = NULL;
                 _cleanup_(json_variant_unrefp) JsonVariant *v = NULL;
                 _cleanup_(erase_and_freep) void *secret = NULL;
-                _cleanup_free_ void *blob = NULL, *hash = NULL;
-                size_t secret_size, blob_size, hash_size;
+                _cleanup_free_ void *blob = NULL, *hash = NULL, *srk_buf = NULL;
+                size_t secret_size, blob_size, hash_size, srk_buf_size = 0;
                 uint16_t pcr_bank, primary_alg;
                 int keyslot;
 
-                r = tpm2_seal(arg_tpm2_device, arg_tpm2_pcr_mask, &secret, &secret_size, &blob, &blob_size, &hash, &hash_size, &pcr_bank, &primary_alg);
+                r = tpm2_seal(arg_tpm2_device, arg_tpm2_pcr_mask, &secret, &secret_size, &blob, &blob_size, &hash, &hash_size, &pcr_bank, &primary_alg, &srk_buf, &srk_buf_size);
                 if (r < 0)
                         return log_error_errno(r, "Failed to seal to TPM2: %m");
 
@@ -2628,7 +2628,7 @@ static int partition_encrypt(
                 if (keyslot < 0)
                         return log_error_errno(keyslot, "Failed to add new TPM2 key to %s: %m", node);
 
-                r = tpm2_make_luks2_json(keyslot, arg_tpm2_pcr_mask, pcr_bank, primary_alg, blob, blob_size, hash, hash_size, &v);
+                r = tpm2_make_luks2_json(keyslot, arg_tpm2_pcr_mask, pcr_bank, primary_alg, blob, blob_size, hash, hash_size, srk_buf, srk_buf_size, &v);
                 if (r < 0)
                         return log_error_errno(r, "Failed to prepare TPM2 JSON token object: %m");
 

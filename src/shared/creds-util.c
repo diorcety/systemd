@@ -541,7 +541,9 @@ int encrypt_credential_and_warn(
                               &tpm2_policy_hash,
                               &tpm2_policy_hash_size,
                               &tpm2_pcr_bank,
-                              &tpm2_primary_alg);
+                              &tpm2_primary_alg,
+                              /* ret_srk_buf= */ NULL,
+                              /* ret_srk_buf_size= */ 0);
                 if (r < 0) {
                         if (!sd_id128_is_null(with_key))
                                 return r;
@@ -795,6 +797,10 @@ int decrypt_credential_and_warn(
                     le32toh(h->tag_size))
                         return log_error_errno(SYNTHETIC_ERRNO(EBADMSG), "Encrypted file too short.");
 
+                /*
+                 * TODO: Add the SRK data to the credential structure so it can be plumbed
+                 * through and used to verify the TPM session.
+                 */
                 r = tpm2_unseal(tpm2_device,
                                 le64toh(t->pcr_mask),
                                 le16toh(t->pcr_bank),
@@ -803,6 +809,8 @@ int decrypt_credential_and_warn(
                                 le32toh(t->blob_size),
                                 t->policy_hash_and_blob + le32toh(t->blob_size),
                                 le32toh(t->policy_hash_size),
+                                /* srk_buf= */ NULL,
+                                /* srk_buf_size= */ 0,
                                 &tpm2_key,
                                 &tpm2_key_size);
                 if (r < 0)

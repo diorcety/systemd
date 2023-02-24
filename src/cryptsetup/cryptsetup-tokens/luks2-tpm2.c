@@ -17,6 +17,8 @@ int acquire_luks2_key(
                 size_t key_data_size,
                 const void *policy_hash,
                 size_t policy_hash_size,
+                const void *srk_buf,
+                size_t srk_buf_size,
                 void **ret_decrypted_key,
                 size_t *ret_decrypted_key_size) {
 
@@ -42,6 +44,7 @@ int acquire_luks2_key(
                         primary_alg,
                         key_data, key_data_size,
                         policy_hash, policy_hash_size,
+                        srk_buf, srk_buf_size,
                         ret_decrypted_key, ret_decrypted_key_size);
 }
 
@@ -53,13 +56,14 @@ int parse_luks2_tpm2_data(
                 uint16_t *ret_pcr_bank,
                 uint16_t *ret_primary_alg,
                 char **ret_base64_blob,
-                char **ret_hex_policy_hash) {
+                char **ret_hex_policy_hash,
+                char **ret_base64_srk) {
 
         int r;
         JsonVariant *w, *e;
         uint32_t pcr_mask = 0;
         uint16_t pcr_bank = UINT16_MAX, primary_alg = TPM2_ALG_ECC;
-        _cleanup_free_ char *base64_blob = NULL, *hex_policy_hash = NULL;
+        _cleanup_free_ char *base64_blob = NULL, *hex_policy_hash = NULL, *base64_srk = NULL;
         _cleanup_(json_variant_unrefp) JsonVariant *v = NULL;
 
         assert(json);
@@ -68,6 +72,7 @@ int parse_luks2_tpm2_data(
         assert(ret_primary_alg);
         assert(ret_base64_blob);
         assert(ret_hex_policy_hash);
+        assert(ret_base64_srk);
 
         r = json_parse(json, 0, &v, NULL, NULL);
         if (r < 0)
@@ -138,11 +143,19 @@ int parse_luks2_tpm2_data(
         if (!hex_policy_hash)
                 return -ENOMEM;
 
+        w = json_variant_by_key(v, "tpm2_srk");
+        if (w) {
+            base64_srk = strdup(json_variant_string(w));
+            if (!base64_srk)
+                return -ENOMEM;
+        }
+
         *ret_pcr_mask = pcr_mask;
         *ret_pcr_bank = pcr_bank;
         *ret_primary_alg = primary_alg;
         *ret_base64_blob = TAKE_PTR(base64_blob);
         *ret_hex_policy_hash = TAKE_PTR(hex_policy_hash);
+        *ret_base64_srk = TAKE_PTR(base64_srk);
 
         return 0;
 }
