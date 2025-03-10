@@ -151,7 +151,9 @@ static int run(int argc, char *argv[]) {
         _cleanup_free_ char *joined = NULL, *pcr_string = NULL;
         const char *word;
         char **bank;
+#if 0
         unsigned pcr_nr;
+#endif
         size_t length;
         TSS2_RC rc;
         int r;
@@ -175,6 +177,7 @@ static int run(int argc, char *argv[]) {
 
         length = strlen(word);
 
+#if 0
         /* Skip logic if sd-stub is not used, after all PCR 11 might have a very different purpose then. */
         r = efi_get_variable_string(EFI_LOADER_VARIABLE(StubPcrKernelImage), &pcr_string);
         if (r == -ENOENT) {
@@ -190,6 +193,8 @@ static int run(int argc, char *argv[]) {
                 return log_error_errno(r, "Failed to parse StubPcrKernelImage EFI variable: %s", pcr_string);
         if (pcr_nr != TPM_PCR_INDEX_KERNEL_IMAGE)
                 return log_error_errno(SYNTHETIC_ERRNO(EREMOTE), "Kernel stub measured kernel image into PCR %u, which is different than expected %u.", pcr_nr, TPM_PCR_INDEX_KERNEL_IMAGE);
+
+#endif
 
         r = dlopen_tpm2();
         if (r < 0)
