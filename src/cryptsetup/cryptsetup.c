@@ -777,8 +777,7 @@ static int measured_crypt_activate_by_volume_key(
                 return r;
         }
 
-        (void) measure_volume_key(cd, name, volume_key, volume_key_size); /* OK if fails */
-        return r;
+        return measure_volume_key(cd, name, volume_key, volume_key_size); /* NOT OK if fails */
 }
 
 static int measured_crypt_activate_by_passphrase(
